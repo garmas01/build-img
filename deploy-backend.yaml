@@ -1,0 +1,82 @@
+---
+# Volumen Persistente Clain
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-garmas
+spec:
+  storageClassName: local-path 
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+...
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc-backend 
+  labels:
+    name: nginx-garmas
+spec:
+  type: LoadBalancer 
+  ports:
+    - port: 80
+      name: http
+  selector:
+    app: nginx-garmas
+...
+
+---
+apiVersion: apps/v1
+kind: Deployment 
+metadata:
+  name: nginx-garmas
+  labels:
+    app: nginx-garmas
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx-garmas
+  template:
+    metadata:
+      labels:
+        app: nginx-garmas
+    spec:
+      volumes:
+        - name: pvc-deploy-storage
+          persistentVolumeClaim:
+            claimName: pvc-garmas
+      containers:
+      - name: garmas 
+        image: garmas2022/garmas-nginx
+        ports:
+          - containerPort: 80
+        volumeMounts:
+          - mountPath: "/usr/share/nginx/html"
+            name: pvc-deploy-storage
+...
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-backend
+spec:
+  rules:
+    - host: garmas.ddns.net 
+      http:
+        paths:
+        - path: /
+          backend:
+            service:
+              name: svc-backend 
+              port:
+                number: 80
+          pathType: Prefix
+...          
+
+
+
